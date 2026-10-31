@@ -154,3 +154,32 @@ def filter_empties(
             continue
         out.append(v)
     return out
+
+def drop_small_background(products: list[Box], ratio: float, min_count: int = 12) -> list[Box]:
+    """Aisle products in the background are far smaller than the main shelf's."""
+    if len(products) < min_count:
+        return products
+    areas = np.array([b.width * b.height for b in products])
+    ref = float(np.percentile(areas, 75))
+    return [b for b, a in zip(products, areas) if a >= ratio * ref]
+
+def suppress_contained(boxes: list[Box], min_cover: float) -> list[Box]:
+    """Drop a box that lies (almost) entirely inside a bigger one: a duplicate from another
+    scale, or a part of the same product (a bottle cap inside its bottle)."""
+    if len(boxes) < 2 or min_cover > 1.0:
+        return boxes
+    ordered = sorted(boxes, key=lambda b: b.width * b.height, reverse=True)
+    kept: list[Box] = []
+    kept_arr = np.zeros((0, 4))
+    for box in ordered:
+        area = box.width * box.height
+        if area <= 0:
+            continue
+        if kept_arr.size:
+            w = np.clip(np.minimum(box.x2, kept_arr[:, 2]) - np.maximum(box.x1, kept_arr[:, 0]), 0, None)
+            h = np.clip(np.minimum(box.y2, kept_arr[:, 3]) - np.maximum(box.y1, kept_arr[:, 1]), 0, None)
+            if (w * h / area).max() >= min_cover:
+                continue
+        kept.append(box)
+        kept_arr = np.vstack([kept_arr, [box.x1, box.y1, box.x2, box.y2]])
+    return kept

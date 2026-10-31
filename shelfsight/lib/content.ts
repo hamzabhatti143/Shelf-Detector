@@ -2,6 +2,7 @@ import type { IconName } from "@/components/ui/Icon";
 import { MAX_UPLOAD_MB, MAX_VIDEO_MB, MAX_VIDEO_SECONDS } from "./config";
 import type { AuditMode } from "./types";
 
+
 export const COMMON_TEXT = {
   skipToContent: "Skip to content",
   toggleToLight: "Switch to light mode",
@@ -105,6 +106,7 @@ export const DASHBOARD_TEXT = {
   subtitle: "Shelf health across your stores this week.",
   sampleBadge: "Sample data",
   newAudit: "New audit",
+  cameraAudit: "Camera Audit",
   breakdownTitle: "Issues by type",
   recentTitle: "Recent audits",
   issuesSuffix: "issues",

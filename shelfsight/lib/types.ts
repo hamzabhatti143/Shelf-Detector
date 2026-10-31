@@ -68,3 +68,29 @@ export interface StoreOption {
   id: string;
   name: string;
 }
+
+export interface VideoTimelineFrame {
+  t: number;
+  /** [x, y, w, h] in % of the frame */
+  boxes: [number, number, number, number][];
+  /** [x, y, w, h, text] price tags; text is only filled on frames where OCR ran */
+  tags?: [number, number, number, number, string][];
+  /** [x, y, w, h] empty slots found on this frame */
+  empties?: [number, number, number, number][];
+  ocr?: boolean;
+}
+
+export interface VideoMotion {
+  w: number;
+  h: number;
+  /** [seconds, a, b, tx, ty]: cumulative camera motion, z' = (a + bi) z + (tx + ty i) in pixels of a w x h copy */
+  samples: number[][];
+}
+
+export interface VideoTimeline {
+  width: number;
+  height: number;
+  duration: number;
+  frames: VideoTimelineFrame[];
+  motion?: VideoMotion;
+}

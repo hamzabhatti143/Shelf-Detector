@@ -19,6 +19,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-zinc-600 dark:text-zinc-400">{DASHBOARD_TEXT.subtitle}</p>
         </div>
         <ButtonLink href="/audit/new">{DASHBOARD_TEXT.newAudit}</ButtonLink>
+        <ButtonLink href="/camera">{DASHBOARD_TEXT.cameraAudit}</ButtonLink>
       </div>
 
       <DashboardStats />

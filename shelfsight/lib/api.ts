@@ -10,7 +10,7 @@ import {
 } from "./config";
 import { VIDEO_TEXT } from "./content";
 import { RECENT_AUDITS, SAMPLE_REPORT } from "./mock-data";
-import type { AuditReport, VideoJob } from "./types";
+import type { AuditReport, ShelfIssue, VideoJob, VideoTimeline } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -89,6 +89,95 @@ export async function getAuditById(id: string): Promise<AuditReport | null> {
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Failed to load audit (${response.status})`);
   return (await response.json()) as AuditReport;
+}
+
+export function videoUrl(auditId: string): string {
+  return assetUrl(`/v1/audits/${encodeURIComponent(auditId)}/video`);
+}
+
+/** null when this audit has no live view (photo audits, old video audits, mock mode). */
+export async function getTimeline(auditId: string, signal?: AbortSignal): Promise<VideoTimeline | null> {
+  if (!API_URL) return null;
+  const response = await fetch(`${API_URL}/v1/audits/${encodeURIComponent(auditId)}/timeline`, {
+    cache: "no-store",
+    signal,
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new ApiError(`Failed to load live view (${response.status})`, response.status);
+  return (await response.json()) as VideoTimeline;
+}
+
+// ---------------------------------------------------------------- camera
+
+function requireBackend(): string {
+  if (!API_URL) throw new ApiError("Camera audits need the backend (NEXT_PUBLIC_API_URL is not set).");
+  return API_URL;
+}
+
+async function postJson(path: string, payload: unknown, signal?: AbortSignal): Promise<Response> {
+  const response = await fetch(`${requireBackend()}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new ApiError(readDetail(body, `Request failed (${response.status})`), response.status);
+  }
+  return response;
+}
+
+/** One picture from the camera, to check the connection. */
+export async function testCamera(url: string, signal?: AbortSignal): Promise<Blob> {
+  return (await postJson("/v1/cameras/test", { url }, signal)).blob();
+}
+
+/** A normal shelf audit on a fresh picture from the camera. */
+export async function auditCamera(url: string, storeId: string, signal?: AbortSignal): Promise<AuditReport> {
+  return (await (await postJson("/v1/camera-audits", { url, store_id: storeId }, signal)).json()) as AuditReport;
+}
+
+export interface LiveBoxes {
+  ready: boolean;
+  error?: string | null;
+  width?: number;
+  height?: number;
+  /** products, [x, y, w, h] in % of the frame */
+  boxes?: [number, number, number, number][];
+  /** same shape as the issues of a saved report */
+  issues?: ShelfIssue[];
+  /** price tags: [x, y, w, h, text] */
+  tags?: [number, number, number, number, string][];
+}
+
+export async function startLiveCamera(url: string, signal?: AbortSignal): Promise<{ id: string }> {
+  return (await (await postJson("/v1/cameras/live", { url }, signal)).json()) as { id: string };
+}
+
+export function liveStreamUrl(id: string): string {
+  return assetUrl(`/v1/cameras/live/${encodeURIComponent(id)}/stream`);
+}
+
+export async function getLiveBoxes(id: string, signal?: AbortSignal): Promise<LiveBoxes> {
+  const response = await fetch(`${requireBackend()}/v1/cameras/live/${encodeURIComponent(id)}/boxes`, {
+    cache: "no-store",
+    signal,
+  });
+  if (!response.ok) throw new ApiError(`Live view ended (${response.status})`, response.status);
+  return (await response.json()) as LiveBoxes;
+}
+
+export function stopLiveCamera(id: string): void {
+  if (!API_URL) return;
+  void fetch(`${API_URL}/v1/cameras/live/${encodeURIComponent(id)}`, { method: "DELETE", keepalive: true }).catch(
+    () => undefined,
+  );
+}
+
+export async function auditLiveCamera(id: string, storeId: string, signal?: AbortSignal): Promise<AuditReport> {
+  const path = `/v1/cameras/live/${encodeURIComponent(id)}/audit`;
+  return (await (await postJson(path, { store_id: storeId }, signal)).json()) as AuditReport;
 }
 
 // ---------------------------------------------------------------- video

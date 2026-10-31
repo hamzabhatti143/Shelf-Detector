@@ -221,12 +221,12 @@ class AuditService:
             raise UnknownStoreError(ERR_UNKNOWN_STORE.format(store_id=store_id))
         return store_name
 
-    def read_tags(self, image: np.ndarray) -> list[PriceTagReading]:
+    def read_tags(self, image: np.ndarray, *, ocr: bool = True, budget_s: float | None = None) -> list[PriceTagReading]:
         """A failing OCR step must never break the audit itself."""
         if self._tag_reader is None:
             return []
         try:
-            return self._tag_reader.read(image)
+            return self._tag_reader.read(image, ocr=ocr, budget_s=budget_s)
         except Exception:
             logger.exception("price tag reading failed")
             return []

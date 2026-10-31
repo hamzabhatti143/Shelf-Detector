@@ -5,7 +5,7 @@ import numpy as np
 from app.constants import EMPTY_DEDUP_IOU
 
 from .base import Box, Detection
-from .fusion import EmptyVerdict, filter_empties, fuse_scales, verify_empties
+from .fusion import EmptyVerdict, filter_empties, fuse_scales, verify_empties, drop_small_background, suppress_contained
 from .yolo import YoloDetector
 
 
@@ -58,9 +58,12 @@ class EnsembleDetector(YoloDetector):
             )[0]
 
         products = fuse_scales(per_scale, s.fuse_iou, s.scale_min_votes, s.scale_solo_conf)
+        if s.drop_small_background:
+            products = drop_small_background(products, s.small_bg_area_ratio)
         verdicts = verify_empties(
             _boxes_with_conf(empty_result), products, s.empty_max_product_overlap, EMPTY_DEDUP_IOU
         )
+        products = suppress_contained(products, s.contained_cover)
         verdicts = filter_empties(verdicts, products, width, height)
         debug = EnsembleDebug(
             per_scale_counts={size: len(boxes) for size, boxes in zip(s.product_scales, per_scale)},

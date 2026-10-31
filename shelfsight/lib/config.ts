@@ -23,6 +23,7 @@ export const APP_NAV: ReadonlyArray<{
 }> = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard", matchPrefix: "/dashboard" },
   { label: "New audit", href: "/audit/new", icon: "camera", matchPrefix: "/audit/new" },
+  { label: "Live Camera", href: "/camera", icon: "camera", matchPrefix: "/camera" },
 ];
 
 export const THEME_STORAGE_KEY = "shelfsight-theme";
